@@ -1,8 +1,9 @@
-use core::num;
+
+
 /* *************************************************************************
                            LIBRARIES AND DECLARATIONS           
    ************************************************************************* */
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs:: File;
 use std::io::{BufRead, BufReader};
@@ -22,7 +23,8 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
     let mut return_digits: Vec<usize> = Vec::new();
 
     // Look for first occurrence of numeric digits and put in BTreeMap 
-    for (index, pattern) in vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].into_iter().enumerate() {
+    for (index, pattern) in vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        .into_iter().enumerate() {
         let x = match line.find(pattern) {
             Some(y) => y,
             None => continue
@@ -32,8 +34,9 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
 
     // Look for first occurrence of string digits and put in BTreeMap if we consider spelled out numbers
     if is_spelled {
-        for (index, pattern) in vec!["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"].into_iter().enumerate() {
-            let x = match line.find(pattern) {
+        for (index, pattern) in vec!["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+            .into_iter().enumerate() {
+            let x = match line.to_lowercase().find(pattern) {
                 Some(y) => y,
                 None => continue
             };
@@ -56,7 +59,8 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
     digits.clear();
 
     // Look for last occurrence of numeric digits and put in BTreeMap 
-    for (index, pattern) in vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].into_iter().enumerate() {
+    for (index, pattern) in vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        .into_iter().enumerate() {
         let x = match line.rfind(pattern) {
             Some(y) => y,
             None => continue
@@ -66,8 +70,9 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
 
     // Look for last occurrence of string digits and put in BTreeMap if we consider spelled out numbers
     if is_spelled {
-        for (index, pattern) in vec!["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"].into_iter().enumerate() {
-            let x = match line.rfind(pattern) {
+        for (index, pattern) in vec!["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+            .into_iter().enumerate() {
+            let x = match line.to_lowercase().rfind(pattern) {
                 Some(y) => y,
                 None => continue
             };
@@ -75,8 +80,7 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
         }
     }
 
-    // Get the last digit occurence.  Again BTreeMap auto-sorts this collection hence
-    // just get the last element.  
+    // Get the last digit occurence.  Again BTreeMap auto-sorts this collection hence just get the last element.  
     if digits.len() > 0 {
         // We can safely use unwrap_or()... since we tested for the HashMap lenght.
         let (_, last_digit)= digits.pop_last().unwrap_or((0, 0));
@@ -121,9 +125,7 @@ impl CalibrationCode {
     CalibrationRow struct and functions
     
     A row can have or not have any digits as numeric or spelled-out string form.
-    Hence, the digits attribute is an Option enum of a BTreeMap collection.
-    BTreeMap collection is chosen to be able to sort the digit index/position
-    on an given line of document or paragraph.
+    Hence, the code attribute is an Option enum of a CalibrationCode struct.
   -------------------------------------------------------------------------- */
 struct CalibrationRow {
     line: String,
@@ -132,7 +134,7 @@ struct CalibrationRow {
 
 impl CalibrationRow {
     // Create a new calibration row from a given line
-    fn from<'a>(input_line: &'a str, is_spelled: bool) -> CalibrationRow {
+    fn from(input_line: &str, is_spelled: bool) -> CalibrationRow {
         let digits = match get_digits(input_line, is_spelled) {
             Some(d) => d,
             None => {
@@ -155,11 +157,11 @@ impl CalibrationRow {
 
 /* -------------------------------------------------------------------------
     CalibrationDocument struct and fucntions
-    A document is a sequence of calibration rows 
+
+    A Calibration document is just a sequence of Calibration rows 
   -------------------------------------------------------------------------- */
 struct CalibrationDocument {
-    lines: Vec<CalibrationRow>,
-    spelled_digits: bool
+    lines: Vec<CalibrationRow>
 }
 
 impl CalibrationDocument {
@@ -169,7 +171,7 @@ impl CalibrationDocument {
             Ok(k) => k,
             Err(e) => return Err(e)
         };
-        let mut c = CalibrationDocument { lines: vec![], spelled_digits: is_spelled };
+        let mut c = CalibrationDocument { lines: vec![] };
         for (_line_number, line_string) in BufReader::new(f).lines()
             .map(|x| match x {
                 Ok(y) => y,
@@ -181,7 +183,7 @@ impl CalibrationDocument {
         Ok(c)
     }
 
-    /*       ---------------------- TOOOOOOOOOO DOOOOOOOOOOOOOOOOOOO -----------------
+    /* ---------------------- TOOOOOOOOOO DOOOOOOOOOOOOOOOOOOO -----------------
     /*  If spelled digits is false just consider numeric digits.  Otherwise consider both
         numeric and spelled digits in the document */
     fn spelled_digits(&mut self, flag: bool) {
@@ -190,12 +192,13 @@ impl CalibrationDocument {
         for line in self.lines.iter() {
             todo!();
         }
-    }
-             ---------------------- TOOOOOOOOOO DOOOOOOOOOOOOOOOOOOO ----------------- */
+    } ---------------------- TOOOOOOOOOO DOOOOOOOOOOOOOOOOOOO ----------------- */
 
     fn document_total(&self) -> u32 {
         let total = 0u32;
-        
+
+        todo!(); 
+
         total
     }
 
