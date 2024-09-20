@@ -14,11 +14,10 @@ use std::io::{BufRead, BufReader};
                               HELPER FUNCTIONS       
    ************************************************************************* */
 
-fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
-    // The BTreeMap will contain the first and last occurrences of the digits only
-    // since Rust only provides find and rfind functions and we are too lazy to 
-    // create a more complex pattern search of occurences.
+fn get_digits(line: &str, is_spelled: bool) -> Option<Vec<usize>> {
 
+    // The BTreeMap will contain the first and last occurrences of the digits only
+    // since we only use Rust find and rfind functions
     let mut digits: BTreeMap<usize, usize> = BTreeMap::new();
     let mut return_digits: Vec<usize> = Vec::new();
 
@@ -45,7 +44,7 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
     }
 
     // Now get the very first occurence of a digit
-    // BTreeMap auto-sorts by key hence just get the first entry since we have numbers for the keys
+    // BTreeMap auto-sorts by key hence just get the first entry
     if digits.len() > 0 {
         let (_, first_digit)= digits.pop_first().unwrap_or((0, 0));
         return_digits.push(first_digit);
@@ -101,9 +100,10 @@ fn get_digits<'a>(line: &'a str, is_spelled: bool) -> Option<Vec<usize>> {
     A digit can be either a number spelled our or,
     a numeric number from 0 to 9. 
   -------------------------------------------------------------------------- */
+#[derive(Clone, Copy)]
 struct CalibrationCode {
-    first: usize,
-    last: usize,
+    //first: usize,
+    //last: usize,
     value: u8
 }
 
@@ -114,8 +114,8 @@ impl CalibrationCode {
         v.push_str(&l.to_string());
         let c = v.to_string().parse::<u8>().unwrap();
         return CalibrationCode {
-            first: f,
-            last: l,
+            //first: f,
+            //last: l,
             value: c   
         };
     }
@@ -128,7 +128,7 @@ impl CalibrationCode {
     Hence, the code attribute is an Option enum of a CalibrationCode struct.
   -------------------------------------------------------------------------- */
 struct CalibrationRow {
-    line: String,
+    //line: String,
     code: Option<CalibrationCode>
 }
 
@@ -139,7 +139,7 @@ impl CalibrationRow {
             Some(d) => d,
             None => {
                 return CalibrationRow {
-                    line: input_line.to_owned(),
+                    //line: input_line.to_owned(),
                     code: None
                 }
             }
@@ -149,7 +149,7 @@ impl CalibrationRow {
             *digits.get(1).unwrap()
         );
         CalibrationRow{
-            line: input_line.to_owned(),
+            //line: input_line.to_owned(),
             code: Some(c)
         }
     }
@@ -183,22 +183,27 @@ impl CalibrationDocument {
         Ok(c)
     }
 
-    /* ---------------------- TOOOOOOOOOO DOOOOOOOOOOOOOOOOOOO -----------------
-    /*  If spelled digits is false just consider numeric digits.  Otherwise consider both
-        numeric and spelled digits in the document */
-    fn spelled_digits(&mut self, flag: bool) {
-        self.spelled_digits = flag; 
-        // TODO: Re-read the document with spelled digits or not depending of flag value
-        for line in self.lines.iter() {
-            todo!();
-        }
-    } ---------------------- TOOOOOOOOOO DOOOOOOOOOOOOOOOOOOO ----------------- */
-
     fn document_total(&self) -> u32 {
-        let total = 0u32;
+        let mut total = 0u32;
 
-        todo!(); 
+        //todo!(); 
+        for row in self.lines.iter() {
 
+            let code = match row.code {
+                Some(c) => c,
+                None => continue
+            };
+
+            // Add value to the total to fullfill the requirement
+            let v = code.value;
+            total += u32::from(v);
+
+            // For debugging purposes
+            //let f = code.first;
+            //let l = code.last;
+            //let s = &row.line.to_owned();
+            //println!("{:?} -> {:?}, {:?}, {:?}", s, f, l, v);
+        }
         total
     }
 
@@ -208,6 +213,9 @@ impl CalibrationDocument {
                                  MAIN PROGRAM         
    ************************************************************************* */
 fn main() {
+    // Set to consider spelled out digits or not
+    let is_spelled = true;
+
     // Get the input file name
     let input_file = match env::args().nth(1) {
         Some(f) => f,
@@ -218,11 +226,11 @@ fn main() {
     };
 
     // Read and parse the input document containing calibration values
-    let input_document: CalibrationDocument = match CalibrationDocument::new(&input_file, false) {
+    let input_document: CalibrationDocument = match CalibrationDocument::new(&input_file, is_spelled) {
         Ok(c) => c,
         Err(e) => panic!("ERROR: Failed to read input file {:?}!\n{:?}", input_file, e)
     };
 
     // Print the required sum of all calibaration values
-    println!("The calibration code is {:?}", input_document.document_total());
+    println!("\n>>> The calibration code is {:?}", input_document.document_total());
 }
