@@ -3,8 +3,10 @@ use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+
 #[derive(Debug)]
 struct CalibrationRow {
+    line: String,
     first: char,
     last: char
 }
@@ -30,26 +32,182 @@ impl CalibrationDocument {
     }
 }
 
-fn parse_input_line(s: &str) -> Option<CalibrationRow> {
-    // Calibration code is the first occurence of a number from beginning of the line
-    // and the first occurence of a number from the end of the line.
-    let mut c = CalibrationRow { first: '0', last: '0'};
-    // get the first occurence of a digit from beginning of line
-    for m in s.chars() {
+#[derive(Clone)]
+struct Digit {
+    digit: String,
+    index: usize
+}
+
+
+/*
+    If the string does not have any digits return None
+ */
+fn get_int_digit(s: &str, last: bool) -> Option<Digit> {
+    let mut v = Digit { digit: "0".to_string(), index: 0 };
+    let arr: Vec<char> = match last {
+        true => s.chars().into_iter().rev().collect(),
+        false => s.chars().into_iter().collect()
+    };
+    for (i, m) in arr.iter().enumerate() {
         if m.is_digit(10) {
-            c.first = m;
+            v.digit = m.to_string();
+            v.index  = i;
             break;
         }
     }
-    // get the first occurence of a digit from end of line going reverse
-    for m in s.chars().rev() {
-        if m.is_digit(10) {
-            c.last = m;
-            break;
+    println!("get_digit: {:?}, {:?}, {:?} {:?}", s, v.digit, v.index, last);
+    Some(v)
+}
+
+fn get_str_digit(s: &str, last: bool) -> Option<Digit> {
+    let mut v: Option<Digit> = None;
+    let mut found_digit = false;
+    let digits_vec: Vec<&str> = vec!["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+    let digits_arr: Vec<&str> = vec!["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    for (i, p) in digits_vec.iter().enumerate() {
+        if ! last {
+            let num = match s.to_ascii_lowercase().find(*p) {
+                Some(k) => k,
+                None => continue
+            };
+            println!("Found first: {:?} {:?}", *p, num);
+            if v.is_none() {
+                v = Some(Digit {
+                    digit: digits_arr[i].to_owned(),
+                    index: num
+                });
+            } else {
+                if v.unwrap().index > num {
+                    let g = Digit {  
+                        digit: digits_arr[i].to_owned(),
+                        index: num
+                    };
+                    v = Some(g.clone());
+                } else {
+                    continue;
+                }
+            }
+            found_digit = true;
+        } else {
+            let num = match s.to_ascii_lowercase().rfind(*p) {
+                Some(k) =>  k,
+                None => continue
+            };
+            println!("Found last: {:?} {:?}", *p, num);
+            if v.is_none() {
+                v = Some(Digit {
+                    digit: digits_arr[i].to_owned(),
+                    index: num
+                });
+            } else {
+                if num > v.unwrap().index {
+                    let g = Digit {  
+                        digit: digits_arr[i].to_owned(),
+                        index: num
+                    };
+                    v = Some(g.clone());
+                } else {
+                    continue;
+                }
+            }
+            found_digit = true;
         }
     }
-    //println!("{:?} => {:?} {:?}", s, c.first, c.last);
-    Some(c)
+    if found_digit {
+        println!("get_string_digit: {:?}, {:?}, {:?} {:?}", s, v.unwrap().digit, v.unwrap().index, last);
+        return v;
+    } else {
+        println!("get_string_digit: {:?}, n/a, n/a n/a", s);
+        return None;
+    }
+}
+
+fn get_real_digit(s: &str, last: bool) -> Option<Digit> {
+    let digit_int = get_int_digit(s, last);
+    let digit_str = get_str_digit(s, last);
+    let mut d = Digit { digit: '0', index: 0 };
+    if digit_int.is_some() && digit_str.is_some() {
+        if last {
+            if digit_int.as_ref().unwrap().index > digit_str.as_ref().unwrap().index {
+                d = digit_int.clone().unwrap();
+            } else {
+                d = digit_str.clone().unwrap();
+            }
+        } else {
+            if digit_int.as_ref().unwrap().index < digit_str.as_ref().unwrap().index {
+                d = digit_int.clone().unwrap();
+            } else {
+                d = digit_str.clone().unwrap();
+            }
+        }
+    } else if digit_int.is_some() {
+        d = digit_int.clone().unwrap();
+    } else if digit_str.is_some() {
+        d = digit_str.clone().unwrap();
+    } else {
+        return None;
+    }
+    println!("get_real_digit: {:?}, {:?}, {:?} {:?}", s, d.digit, d.index, last);
+    Some(d)
+}
+
+fn parse_input_line(s: &str) -> CalibrationRow {
+
+    let mut c = CalibrationRow { line: s.to_owned(), first: '0', last: '0'};
+
+    /* -------------------------------------------------------------------
+        Advent of Code 2023 Day 1 Part 1:
+          Calibration code is the first occurence of a number from beginning of the line
+          and the first occurence of a number from the end of the line.
+
+        Assumption in get_digit function for the first digit occurence is
+        that, if no digit is found, then last occurence is none as well
+        and it won't reach that part of the code.
+
+    let mut v = match get_int_digit(s, false) {
+        Some(x) => x,
+        None => return c
+    };
+    c.first = v.digit;
+
+    v = match get_int_digit(s, true) {
+        Some(x) => x,
+        None => return c
+    };
+    c.last = v.digit;
+    ------------------------------------------------------------------- */
+
+
+    /* -------------------------------------------------------------------
+        Advent of Code 2023 Day 1 Part 2:
+          Some digits are spelled out with letters: one, two, three, four,.., nine.
+          Recallibrate the parsing of the document
+
+        Same assumption, in get_real_digit function for the first digit occurence is
+        that, if no string digit is found, then last occurence is none as well
+        and it won't reach that part of the code.
+    ------------------------------------------------------------------- */
+
+    println!("Parse first occurencce---");
+    let mut v = match get_real_digit(s, false) {
+        Some(x) => x,
+        None => return c
+    };
+    c.first = v.digit;
+
+    println!("Parse last occurencce---");
+    v = match get_real_digit(s, true) {
+        Some(x) => x,
+        None => return c
+    };
+    c.last = v.digit;
+
+    // print for debugging purposes only
+    println!(">>>> Parsed line: {:?} => {:?} {:?}", s, c.first, c.last);
+
+    // Return the wanted value
+    c
+
 }
 
 fn parse_input_document(s: &str) -> Result<CalibrationDocument, std::io::Error> {
@@ -63,10 +221,11 @@ fn parse_input_document(s: &str) -> Result<CalibrationDocument, std::io::Error> 
             Ok(y) => y,
             Err(_) => String::from("")
         }) {
-        match parse_input_line(&l) {
+        /*match parse_input_line(&l) {
             Some(r) => c.lines.push(r),
             None => continue
-        };
+        };*/
+        c.lines.push(parse_input_line(&l));
     }
     Ok(c)
 }
