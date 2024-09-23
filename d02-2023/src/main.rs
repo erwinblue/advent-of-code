@@ -32,10 +32,14 @@ fn parse_set_color(s: &str) -> Option<(String, u32)> {
             }
         }
     };
-    let count = match parts.get(0) {
+    /*let count = match parts.get(0) {
         Some(c) => c.to_owned().parse::<u32>().unwrap_or(0u32),
         None => 0u32
-    };
+    };*/
+    let count = parts.get(0)
+        .unwrap_or(&"0")
+        .to_owned().parse::<u32>()
+        .unwrap_or(0u32);
     return Some((color, count));
 }
 
@@ -178,7 +182,7 @@ fn main() {
         games.push(g);
     }
 
-    // Test the possible games
+    // Perform test of the possible games
     let max = Subset {
         red: 12,
         green: 13,
@@ -193,8 +197,8 @@ fn main() {
         }
     }
 
+    // Show result of test of possible games
     println!("\nPossible games: {:?}", possible_games);
     println!("Sum of id's of possible games: {:?}", sum_possible_games);
-
 
 }
