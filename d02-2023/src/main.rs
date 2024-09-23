@@ -50,6 +50,7 @@ fn parse_set_color(s: &str) -> Option<(String, u32)> {
 /* -------------------------------------------------------------------------
    Subset (a.k.a. set) struct and functions
    ------------------------------------------------------------------------- */
+#[derive(Clone, Copy)]
 struct Subset {
     red: u32,
     green: u32,
@@ -96,10 +97,12 @@ impl Subset {
 
 /* -------------------------------------------------------------------------
    Game struct and functions
+   Added minset field for day 2 part 2
    ------------------------------------------------------------------------- */
 struct Game {
     id: u16,
-    subsets: Vec<Subset>
+    subsets: Vec<Subset>,
+    //minset: Option<Subset>
 }
 
 impl Game {
@@ -132,6 +135,7 @@ impl Game {
             zz.show();
         }
 
+        //Some(Game { id: game_id, subsets: sets, minset: None })
         Some(Game { id: game_id, subsets: sets })
     }
 
@@ -144,6 +148,27 @@ impl Game {
             }
         } 
         return (self.id, true);
+    }
+
+    // Added for day 2 part 2
+    fn minimum_subset(&self) -> Option<Subset> {
+        let mut reds: Vec<u32> = vec![0];
+        let mut greens: Vec<u32> = vec![0];
+        let mut blues: Vec<u32> = vec![0];
+        for s in self.subsets.iter() {
+            reds.push(s.red);
+            greens.push(s.green);
+            blues.push(s.blue);
+        }
+        reds.sort();
+        greens.sort();
+        blues.sort();
+        Some(Subset {
+            red: reds.pop().unwrap_or(0),
+            green: greens.pop().unwrap_or(0),
+            blue: blues.pop().unwrap_or(0)
+        })
+        //self.minset.replace(minset.clone());
     }
 
 }
@@ -182,7 +207,7 @@ fn main() {
         games.push(g);
     }
 
-    // Perform test of the possible games
+    // Perform test of the possible games and show result of test of possible games
     let max = Subset {
         red: 12,
         green: 13,
@@ -196,9 +221,22 @@ fn main() {
             sum_possible_games += u32::from(g.id);
         }
     }
-
-    // Show result of test of possible games
     println!("\nPossible games: {:?}", possible_games);
     println!("Sum of id's of possible games: {:?}", sum_possible_games);
 
+    // Identify the minimum set of colors for each game
+    println!("\n");
+    let mut games_powers_sum:u32 = 0;
+    for g in games.iter() {
+        print!("Game#{:?}: Minimum colors: ", g.id);
+        let mset = match g.minimum_subset() {
+            Some(s) => s,
+            None => continue
+        };
+        let game_power: u32 = mset.red * mset.green * mset.blue;
+        games_powers_sum += game_power;
+        // TODO: Remove this.  Used only for debugging.
+        println!("red {:?}, green {:?}, blue {:?} : Power: {:?}", mset.red, mset.green, mset.blue, game_power);
+    }
+    println!("\nSum of game powers: {:?}\n", games_powers_sum);
 }
