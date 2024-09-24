@@ -97,12 +97,10 @@ impl Subset {
 
 /* -------------------------------------------------------------------------
    Game struct and functions
-   Added minset field for day 2 part 2
    ------------------------------------------------------------------------- */
 struct Game {
     id: u16,
     subsets: Vec<Subset>,
-    //minset: Option<Subset>
 }
 
 impl Game {
@@ -135,7 +133,6 @@ impl Game {
             zz.show();
         }
 
-        //Some(Game { id: game_id, subsets: sets, minset: None })
         Some(Game { id: game_id, subsets: sets })
     }
 
@@ -168,7 +165,6 @@ impl Game {
             green: greens.pop().unwrap_or(0),
             blue: blues.pop().unwrap_or(0)
         })
-        //self.minset.replace(minset.clone());
     }
 
 }
@@ -207,7 +203,9 @@ fn main() {
         games.push(g);
     }
 
-    // Perform test of the possible games and show result of test of possible games
+    /*
+        Day 2 Part 1: Perform test of the possible games and show result of test of possible games
+     */
     let max = Subset {
         red: 12,
         green: 13,
@@ -224,7 +222,9 @@ fn main() {
     println!("\nPossible games: {:?}", possible_games);
     println!("Sum of id's of possible games: {:?}", sum_possible_games);
 
-    // Identify the minimum set of colors for each game
+    /*
+        Day 2 Part 2: Identify the minimum set of colors for each game and get the sum
+     */
     println!("\n");
     let mut games_powers_sum:u32 = 0;
     for g in games.iter() {
@@ -236,7 +236,7 @@ fn main() {
         let game_power: u32 = mset.red * mset.green * mset.blue;
         games_powers_sum += game_power;
         // TODO: Remove this.  Used only for debugging.
-        println!("red {:?}, green {:?}, blue {:?} : Power: {:?}", mset.red, mset.green, mset.blue, game_power);
+        println!("red {:?}, green {:?}, blue {:?} : Power {:?}", mset.red, mset.green, mset.blue, game_power);
     }
     println!("\nSum of game powers: {:?}\n", games_powers_sum);
 }
