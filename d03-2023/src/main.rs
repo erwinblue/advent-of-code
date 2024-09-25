@@ -134,30 +134,34 @@ impl Document {
             // Loop through each character of the line to parse symbols and numbers
             // We assume only numbers, symbols (including periods) only exist in our document
             char_number = 0;
-            let mut buffer_number_digits: Vec<char> = Vec::new();
-            let mut buffer_number_coordinates: Vec<Coordinate> = Vec::new();
+            let mut buffer_number_digits: Vec<char> = vec![];
+            let mut buffer_number_coordinates: Vec<Coordinate> = vec![];
             let mut is_flush_buffer: bool = false;
-            for character in line_string.trim().chars().into_iter() {
+            let line_length = line_string.trim().chars().count() - 1;
+            for (index, character) in line_string.trim().chars().into_iter().enumerate() {
                 // set the current coordinate
                 current_coordinate = Coordinate{ x: char_number, y: line_number };
-                if character != '.' {
+                if character.is_digit(10) {
                     // if a digit, append the character and coordinates to our buffers.
-                    if character.is_digit(10) {
-                        buffer_number_digits.push(character);
-                        buffer_number_coordinates.push(current_coordinate);
-                    } else {
-                        // if a symbol, create a new symbol object and add to the document
-                        // we also set flag to flush buffers as previous character 
-                        // may have been part of a series of digits
-                        document.symbols.push(
-                            Symbol::make_symbol(character, current_coordinate)
-                        );
+                    buffer_number_digits.push(character);
+                    buffer_number_coordinates.push(current_coordinate);
+                    // if we are the last character in the line,
+                    // we need to flush the buffer before going to the next line
+                    if index == line_length {
                         is_flush_buffer = true;
                     }
+                } else if character == '.' {
+                    is_flush_buffer = true;
                 } else {
-                    // if we are a period (i.e. '.') then we set flag to flush buffers.
+                    // if a symbol, create a new symbol object and add to the document
+                    // we also set flag to flush buffers as previous character 
+                    // may have been part of a series of digits
+                    document.symbols.push(
+                        Symbol::make_symbol(character, current_coordinate)
+                    );
                     is_flush_buffer = true;
                 }
+                // flush the buffer to create a number and get its coordinates
                 if is_flush_buffer {
                     // only flush the buffer if it is not empty
                     if !buffer_number_coordinates.is_empty() && !buffer_number_digits.is_empty() {
@@ -188,16 +192,11 @@ impl Document {
     fn part_numbers(&self) -> Vec<u32> {
         let mut parts: Vec<u32> = Vec::new();
         let mut adjacent_points: Vec<Coordinate> = Vec::new();
-        let mut count = 0u32;
         for symbol in self.symbols.iter() {
             let mut symbol_ajacents = symbol.adjacent_coordinates(self.maxpoint);
             // TODO: Remvoe this only used for debugging
-            println!("Symbol: {:?} {:?}", symbol.symbol, symbol_ajacents);
+            //println!("Symbol: {:?} {:?}", symbol.symbol, symbol_ajacents);
             adjacent_points.append(&mut symbol_ajacents);
-            count += 1;
-            //if count > 7 {
-            //    break;
-            //}
         }
 
         let mut is_adjacent = false;
@@ -247,7 +246,7 @@ fn main() {
     };
     let part_numbers = document.part_numbers();
     // TODO: Remvoe this only used for debugging
-    dbg!(&part_numbers);
+    //dbg!(&part_numbers);
 
     // show the sum of all part numbers
     let mut sum_of_parts = 0u32;
