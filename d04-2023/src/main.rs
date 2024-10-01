@@ -1,6 +1,7 @@
 /* *************************************************************************
                            LIBRARIES AND DECLARATIONS           
    ************************************************************************* */
+use std::collections::VecDeque;
 use std::env;
 use std::fs:: File;
 use std::io::{BufRead, BufReader};
@@ -37,7 +38,7 @@ fn list_numbers(s: &str) -> Vec<u32> {
 /* -------------------------------------------------------------------------
    Winning - List of winning numbers
    ------------------------------------------------------------------------- */
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Winning {
     numbers: Vec<u32>
 }
@@ -56,7 +57,7 @@ impl Winning {
 /* -------------------------------------------------------------------------
    Hand - List of potential numbers
    ------------------------------------------------------------------------- */
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Hand {
     numbers: Vec<u32>
 }
@@ -75,12 +76,12 @@ impl Hand {
 /* -------------------------------------------------------------------------
    Card - Contains Winning numbers and Hand
    ------------------------------------------------------------------------- */
+#[derive(Clone)]
 struct Card {
     id: u32,
     winning: Winning,
     hand: Hand,
-    matched: Vec<u32>,
-    points: u32
+    matched: Vec<u32>
 }
 
 impl Card {
@@ -116,29 +117,26 @@ impl Card {
             None => return None
         };
 
-        let mut new_card = Card {
+        Some(Card {
             id: card_id,
             winning: winning_numbers,
             hand: hand_numbers,
-            matched: vec![],
-            points: 0u32
-        };
-        new_card.matched = new_card.matched_numbers();
-        new_card.points = new_card.card_points();
-        Some(new_card)
+            matched: vec![]
+        })
     }
 
-    fn matched_numbers(&self) -> Vec<u32> {
+    fn matched_numbers(&mut self) {
         let mut matched: Vec<u32> = vec![];
         for hand_number in self.hand.numbers.iter() {
             if self.winning.numbers.iter().any(|x| x == hand_number) {
                 matched.push(*hand_number);
             }
         }
-        matched
+        self.matched = matched.to_owned();
     }
 
-    fn card_points(&self) -> u32 {
+    // TODO: Remove this, only needed for part 1
+    fn card_points(&mut self) -> u32 {
         let points: u32 = match self.matched.len() as u32 {
             0 => 0u32,
             1 => 1u32,
@@ -149,14 +147,47 @@ impl Card {
         points
     }
 
+    fn cards_won(&self, max: u32) -> Vec<u32> {
+        let mut won_cards: Vec<u32> = vec![];
+        let numbers_matched = self.matched.len() as u32;
+        if numbers_matched > 0 {
+            for x in 1..=numbers_matched {
+                if self.id + x > max {
+                    break;
+                } else {
+                    won_cards.push(self.id + x);
+                }
+            }
+        }
+        // TODO: Remove these. debug print 
+        //println!("Card# {:?}:", self.id);
+        //println!("\tMatched cards: {:?}", self.matched);
+        //println!("\t    Cards won: {:?}", won_cards);
+        won_cards
+    }
+
+    fn process_copies(cards_won: Vec<u32>, pile_cards: Vec<Card>) -> VecDeque<Card> {
+        let mut cards: VecDeque<Card> = VecDeque::new();
+        for c in cards_won.iter() {
+            for p in pile_cards.iter() {
+                if p.id == *c {
+                    cards.push_back(p.clone());
+                }
+            }
+        }
+        cards
+    }
 }
 
 
 /* -------------------------------------------------------------------------
-   Pile - A pile of Cards
+   Pile - A pile of (scratch) Cards
+          Added card id's of cards won
    ------------------------------------------------------------------------- */
+#[derive(Clone)]
 struct Pile {
-    cards: Vec<Card>
+    cards: Vec<Card>,
+    max_id: u32
 }
 
 impl Pile {
@@ -173,7 +204,50 @@ impl Pile {
             };
             scratch_cards.push(card);
         }
-        Some(Pile { cards: scratch_cards })
+        let last_card = match scratch_cards.get(scratch_cards.len() - 1) {
+            Some(l) => l.id,
+            None => 0u32
+        };
+        // TODO: Remove these. debug print 
+        println!("Last card id: {:?}", last_card);
+        Some(Pile { cards: scratch_cards, max_id: last_card })
+    }
+
+    // TODO: Remove this, only needed for part 1
+    fn matched_cards(&mut self) -> u32 {
+        let mut total = 0u32;
+        for c in self.cards.iter_mut() {
+            c.matched_numbers();
+            // TODO: Remove these. debug print the pile but we do need total points
+            //println!("Card# {:?}", c.id);
+            //println!("\t{:?}", c.winning);
+            //println!("\t{:?}", c.hand);
+            //println!("\tMatched {:?}", c.matched);
+            total += c.card_points();
+
+        }
+        total
+    }
+
+    // For part 2
+    fn total_cards(&mut self) -> u32 {
+        // make our struct smaller since we're doing a lot of copies at this point of Rust adventure
+        for c in self.cards.iter_mut() {
+            c.winning = Winning { numbers: vec![] };
+            c.hand = Hand { numbers: vec![] };
+        }
+        let mut total = 0u32;
+        let mut card_pile: VecDeque<Card> = VecDeque::from(self.cards.clone());
+        while !card_pile.is_empty() {
+            let card = match card_pile.pop_front() {
+                Some(c) => c,
+                None => break
+            };
+            total += 1;
+            let mut card_list = Card::process_copies(card.cards_won(self.max_id), self.cards.clone());
+            card_pile.append(&mut card_list);
+        }
+        total
     }
 }
 
@@ -198,7 +272,7 @@ fn main() {
     };
 
     // Read in the pile of cards i.e. input file
-    let pile = match Pile::read_cards(f) {
+    let mut pile = match Pile::read_cards(f) {
         Some(p) => p,
         None => {
             println!("ERROR: Cannot read input file {:?}", &input_file);
@@ -206,15 +280,14 @@ fn main() {
         }
     };
     
-    // Get the total points for the cards matched numbers
-    let mut total_points = 0u32;
-    for c in pile.cards.iter() {
-        // debug print the pile but we do need total points
-        //println!("Card# {:?}", c.id);
-        //println!("\t{:?}", c.winning);
-        //println!("\t{:?}", c.hand);
-        //println!("\tMatched {:?} | Points: {:?}", c.matched, c.points);
-        total_points += c.points;
-    }
-    println!("Total points: {:?}", total_points);
+    // Part 1: Get the total points for the cards matched numbers
+    //         TODO: Remove this only used for part 1.
+    let total_points = pile.matched_cards();
+    println!("Total (bogus) points: {:?}", total_points);
+
+    // Part 2: Get the cards with matched numbers and the cards they won
+    //let total_cards= pile.total_cards() + pile.cards.len() as u32;
+    let total_cards= pile.total_cards();
+    println!("Total scratch cards won: {:?}", total_cards);
+
 }
