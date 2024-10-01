@@ -23,6 +23,14 @@ fn list_numbers(s: &str) -> Vec<u32> {
     numbers
 }
    
+fn get_numbers(parts: &Vec<&str>, idx: usize) -> Option<Vec<u32>> {
+    let nums = match parts.get(idx) {
+        Some(x) => list_numbers(*x),
+        None => return None
+    };
+    Some(nums)
+}
+
 /* *************************************************************************
                             ENUM AND METHODS
    ************************************************************************* */
@@ -43,34 +51,12 @@ struct Winning {
     numbers: Vec<u32>
 }
 
-impl Winning {
-    fn get_numbers(input: &str) -> Option<Winning> {
-        let parts: Vec<&str> = input.split('|').into_iter().collect();
-        let nums = match parts.get(0) {
-            Some(x) => list_numbers(*x),
-            None => return None
-        };
-        Some(Winning { numbers: nums })
-    }
-}
-
 /* -------------------------------------------------------------------------
    Hand - List of potential numbers
    ------------------------------------------------------------------------- */
 #[derive(Debug, Clone)]
 struct Hand {
     numbers: Vec<u32>
-}
-
-impl Hand {
-    fn get_numbers(input: &str) -> Option<Hand> {
-        let parts: Vec<&str> = input.split('|').into_iter().collect();
-        let nums = match parts.get(1) {
-            Some(x) => list_numbers(*x),
-            None => return None
-        };
-        Some(Hand { numbers: nums })
-    }
 }
 
 /* -------------------------------------------------------------------------
@@ -108,15 +94,16 @@ impl Card {
             Some(b) => *b,
             None => return None
         };
-        let winning_numbers= match Winning::get_numbers(body) {
-            Some(w) => w,
+        let body_parts: Vec<&str> = body.split('|').into_iter().collect();
+        let winning_numbers = match get_numbers(&body_parts, 0usize) {
+                Some(c) => Winning { numbers: c },
+                None => return None
+        };
+        let hand_numbers = match get_numbers(&body_parts, 1usize) {
+            Some(h) => Hand { numbers: h },
             None => return None
         };
-        let hand_numbers = match Hand::get_numbers(body) {
-            Some(h) => h,
-            None => return None
-        };
-
+        // Create the card object
         Some(Card {
             id: card_id,
             winning: winning_numbers,
@@ -135,7 +122,6 @@ impl Card {
         self.matched = matched.to_owned();
     }
 
-    // TODO: Remove this, only needed for part 1
     fn card_points(&mut self) -> u32 {
         let points: u32 = match self.matched.len() as u32 {
             0 => 0u32,
@@ -182,7 +168,6 @@ impl Card {
 
 /* -------------------------------------------------------------------------
    Pile - A pile of (scratch) Cards
-          Added card id's of cards won
    ------------------------------------------------------------------------- */
 #[derive(Clone)]
 struct Pile {
@@ -213,7 +198,6 @@ impl Pile {
         Some(Pile { cards: scratch_cards, max_id: last_card })
     }
 
-    // TODO: Remove this, only needed for part 1
     fn matched_cards(&mut self) -> u32 {
         let mut total = 0u32;
         for c in self.cards.iter_mut() {
@@ -281,13 +265,11 @@ fn main() {
     };
     
     // Part 1: Get the total points for the cards matched numbers
-    //         TODO: Remove this only used for part 1.
     let total_points = pile.matched_cards();
     println!("Total (bogus) points: {:?}", total_points);
 
     // Part 2: Get the cards with matched numbers and the cards they won
-    //let total_cards= pile.total_cards() + pile.cards.len() as u32;
-    let total_cards= pile.total_cards();
+    let total_cards = pile.total_cards();
     println!("Total scratch cards won: {:?}", total_cards);
 
 }
