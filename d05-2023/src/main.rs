@@ -18,12 +18,6 @@ use std::io::{BufRead, BufReader};
                            TRAITS
    ************************************************************************* */
 
-/*trait Lookup {
-    //fn map_source(&self) -> String;
-    //fn map_destination(&self) -> String;
-    fn convert_value(&self, value: u32) -> Option<u32>;
-}*/
-
 /* *************************************************************************
                          STRUCTURE AND METHODS
    ************************************************************************* */
@@ -36,9 +30,9 @@ use std::io::{BufRead, BufReader};
    ------------------------------------------------------------------------- */
 #[derive(Clone, Copy, Debug)]
 struct Range {
-    source: u32,
-    destination: u32,
-    length: u32
+    source: u64,
+    destination: u64,
+    length: u64
 }
 
 impl Range {
@@ -46,16 +40,16 @@ impl Range {
         let parts: Vec<&str> = range_entry.split_whitespace().into_iter().collect();
         if parts.len() == 3 {
             return Some(Range {
-                source: parts.get(1).unwrap_or(&"0").parse::<u32>().unwrap_or(0u32),
-                destination: parts.get(0).unwrap_or(&"0").parse::<u32>().unwrap_or(0u32),
-                length: parts.get(2).unwrap_or(&"0").parse::<u32>().unwrap_or(0u32)
+                source: parts.get(1).unwrap_or(&"0").parse::<u64>().unwrap_or(0u64),
+                destination: parts.get(0).unwrap_or(&"0").parse::<u64>().unwrap_or(0u64),
+                length: parts.get(2).unwrap_or(&"0").parse::<u64>().unwrap_or(0u64)
             });
         } else {
             return None;
         }
     }
 
-    fn within_range(&self, value: u32) -> Option<u32> {
+    fn within_range(&self, value: u64) -> Option<u64> {
         let destination_value = if self.source <= value && value <= (self.source + self.length) {
             self.destination + (value - self.source)
         } else {
@@ -72,12 +66,13 @@ impl Range {
    ------------------------------------------------------------------------- */
 #[derive(Debug)]
 struct Seed {
-    id: u32,
-//    categories: HashMap<String, u32>
+    id: u64,
+//    categories: HashMap<String, u64>
 }
 
 impl Seed {
     fn get_seeds(line: &str) -> Option<Vec<Seed>> {
+        let mut seed_line: Vec<u64> = vec![];
         let mut seeds: Vec<Seed> = vec![];
         let numbers = match line.split(':').last() {
             Some(n) => n,
@@ -86,12 +81,37 @@ impl Seed {
         for num in numbers.trim().split_whitespace().into_iter() {
             //if num.contains(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) {
             if num.chars().any(|x|x.is_digit(10)) {
-                seeds.push(Seed {
-                    id: num.parse::<u32>().unwrap_or(0u32),
- //                   categories: HashMap::new()
-                });
+                seed_line.push(num.parse::<u64>().unwrap_or(0u64));
             }
         }
+        if seed_line.len() % 2 != 0 {
+            panic!("ERROR: Seed line is not an even number of items!\n\tMust be: <entry1> <entry2> ... <entryN>.\n\tWhere: <entry> = <seed start> <range>")
+        }
+       
+        //while !seed_line.is_empty() {
+        loop {
+            let buffer_chunk = match seed_line.first_chunk::<2>() {
+                Some(s) => *s,
+                None => break
+            };
+            //dbg!(buffer_chunk);
+            seed_line.drain(0..2);
+            let seed_start = *buffer_chunk.get(0).unwrap_or(&0u64);
+            let seed_range = *buffer_chunk.get(1).unwrap_or(&0u64);
+            //dbg!(seed_start);
+            //dbg!(seed_range);
+            //for s_val in seed_start..=seed_range {
+            let mut counter = seed_start;
+            while counter <= seed_start + seed_range {
+                //println!("s: {:?}", counter);
+                seeds.push(Seed { id: counter });
+                counter += 1;
+            }
+            if seed_line.is_empty() {
+                break;
+            }
+        }
+        //dbg!(&seeds);
         Some(seeds)
     }
 }
@@ -127,7 +147,7 @@ impl MapInstance {
     }
 
     // Per challenge problem, if value is not within range, destination value = source value
-    fn convert_value(&self, value: u32) -> (String, u32) {
+    fn convert_value(&self, value: u64) -> (String, u64) {
         let name = self.destination_category.to_owned();
         let mut extrapolated = value;
         for r in self.ranges.iter() {
@@ -282,11 +302,11 @@ impl Almanac {
     }
 
     // get the seed category values
-    fn seed_categories(&self) -> HashMap<u32, HashMap<String, u32>> {
-        let mut sd: HashMap<u32, HashMap<String, u32>> = HashMap::new();
+    fn seed_categories(&self) -> HashMap<u64, HashMap<String, u64>> {
+        let mut sd: HashMap<u64, HashMap<String, u64>> = HashMap::new();
         for seed in self.seeds.iter() {
             let mut source_value= seed.id;
-            let mut cat_map: HashMap<String, u32> = HashMap::new();
+            let mut cat_map: HashMap<String, u64> = HashMap::new();
             for map_id in self.route.iter() {
                 let mi = match self.lookup_mapid(*map_id) {
                     Some(m) => m,
@@ -357,7 +377,7 @@ fn main() {
     //dbg!(&seed_categories);
 
     // Get the lowest location number from all the seeds
-    let mut locations: Vec<u32> = vec![];
+    let mut locations: Vec<u64> = vec![];
     for (_, t) in seed_categories.iter() {
         for (k, v) in t.iter() {
             if *k == "location".to_string() {
@@ -366,7 +386,7 @@ fn main() {
         }
     }
     locations.sort();
-    let lowest = locations.first().unwrap_or(&0u32);
+    let lowest = locations.first().unwrap_or(&0u64);
     println!("Lowest location: {:?}", lowest);
 
 }
