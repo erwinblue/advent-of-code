@@ -2,7 +2,7 @@
                         LIBRARIES AND DECLARATIONS
    ************************************************************************* */
 use std::collections::HashMap;
-use std::env;
+use std::{env, u64};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -323,6 +323,30 @@ impl Almanac {
         }
         sd
     }
+
+    // TODO: To improve solution to part 2
+    fn lowest_location(&self) -> u64 {
+        let mut lowest: u64 = u64::MAX;
+        let mut started = false;
+        for seed in self.seeds.iter() {
+            let mut source_value= seed.id;
+            started = true;
+            for map_id in self.route.iter() {
+                let mi = match self.lookup_mapid(*map_id) {
+                    Some(m) => m,
+                    None => continue
+                };
+                let (category, val) = mi.convert_value(source_value);
+                if category == "location".to_string() {
+                    if started && val < lowest {
+                        lowest = val;
+                    }
+                }
+                source_value = val;
+            }
+        }
+        lowest
+    }
 }
 
 /* *************************************************************************
@@ -370,6 +394,10 @@ fn main() {
 
     almanac.route = map_path;
 
+    /* 
+    
+     ------------- REMOVED BELOW:  Only used for part 1 ------------------
+
     // Now get the seed category values
     let seed_categories = almanac.seed_categories();
 
@@ -389,4 +417,9 @@ fn main() {
     let lowest = locations.first().unwrap_or(&0u64);
     println!("Lowest location: {:?}", lowest);
 
+    */
+
+    // For part 2
+    let lowest = almanac.lowest_location();
+    println!("Lowest location: {:?}", lowest);
 }
