@@ -59,6 +59,7 @@ impl Range {
     }
 }
 
+/* ------------- REMOVED BELOW:  Unoptimized solution for part 2 ------------------ 
 /* -------------------------------------------------------------------------
    Seed - contains seed name and mapped values
        id - the seed# (assume this comes from the input 'Almanac' file)
@@ -79,7 +80,6 @@ impl Seed {
             None => return None
         };
         for num in numbers.trim().split_whitespace().into_iter() {
-            //if num.contains(&['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) {
             if num.chars().any(|x|x.is_digit(10)) {
                 seed_line.push(num.parse::<u64>().unwrap_or(0u64));
             }
@@ -114,7 +114,9 @@ impl Seed {
         //dbg!(&seeds);
         Some(seeds)
     }
+
 }
+ ------------- REMOVED ABOVE:  Unoptimized solution for part 2 ------------------ */
 
 
 /* -------------------------------------------------------------------------
@@ -178,10 +180,11 @@ impl MapInstance {
    ------------------------------------------------------------------------- */
 #[derive(Debug)]
 struct Almanac {
-    seeds: Vec<Seed>,
+//    seeds: Vec<Seed>,
+    seed_line: String,
     maps: Vec<MapInstance>,
-    start: String,
-    destination: String,
+//    start: String,
+//    destination: String,
     route: Vec<u8>
 }
 
@@ -190,10 +193,11 @@ impl Almanac {
     fn read_file(file: File) -> Option<Almanac>  {
         //todo!();
         let mut almanac = Almanac {
-            seeds: vec![],
+            //seeds: vec![],
+            seed_line: "".to_string(),
             maps: vec![],
-            start: "".to_string(),
-            destination: "".to_string(),
+            //start: "".to_string(),
+            //destination: "".to_string(),
             route: vec![]
         };
         let mut map_header: HashMap<String, String> = HashMap::new();
@@ -213,7 +217,8 @@ impl Almanac {
 
             // get seed list if line contains seeds entry
             if entry.to_lowercase().contains("seeds:") {
-                almanac.seeds = Seed::get_seeds(entry.trim()).unwrap_or(vec![]);
+                //almanac.seeds = Seed::get_seeds(entry.trim()).unwrap_or(vec![]);
+                almanac.seed_line = entry;
             // get map category and reset range buffer if not a new range
             } else if entry.to_lowercase().contains(" map:") {
                 if !map_range_buffer.is_empty() {
@@ -258,8 +263,8 @@ impl Almanac {
     // get list of map id's (u8) which tells the path to use to get
     // from source category to destination category.
     fn make_path(&mut self, start_category: &str, end_category: &str) -> Option<Vec<u8>> {
-        self.start = start_category.to_string();
-        self.destination = end_category.to_string();
+        //self.start = start_category.to_string();
+        //self.destination = end_category.to_string();
         if start_category == end_category {
             panic!("ERROR: Source and destination categories cannot be the same!");
         }
@@ -301,6 +306,8 @@ impl Almanac {
         return None;
     }
 
+    /* ------------- REMOVED BELOW:  Only used for part 1 ------------------
+
     // get the seed category values
     fn seed_categories(&self) -> HashMap<u64, HashMap<String, u64>> {
         let mut sd: HashMap<u64, HashMap<String, u64>> = HashMap::new();
@@ -324,13 +331,16 @@ impl Almanac {
         sd
     }
 
+     ------------- REMOVED ABOVE:  Only used for part 1 ------------------ */
+
+    /* ------------- REMOVED ABOVE:  Part 2 unoptimized ------------------ 
     // TODO: To improve solution to part 2
     fn lowest_location(&self) -> u64 {
         let mut lowest: u64 = u64::MAX;
-        let mut started = false;
+        //let mut started = false;
         for seed in self.seeds.iter() {
             let mut source_value= seed.id;
-            started = true;
+            //started = true;
             for map_id in self.route.iter() {
                 let mi = match self.lookup_mapid(*map_id) {
                     Some(m) => m,
@@ -338,15 +348,72 @@ impl Almanac {
                 };
                 let (category, val) = mi.convert_value(source_value);
                 if category == "location".to_string() {
-                    if started && val < lowest {
+                    /*if started && val < lowest {
                         lowest = val;
-                    }
+                    }*/
+                    if val < lowest { lowest = val }
                 }
                 source_value = val;
             }
         }
         lowest
     }
+
+     ------------- REMOVED ABOVE:  Part 2 unoptimized ------------------ */
+
+    // optimized searching for the lowest location in a very large list of seed numbers
+    fn lowest_location(&self) -> Option<u64> {
+        let mut lowest: u64 = u64::MAX;
+        let number_line = match self.seed_line.split(':').last() {
+            Some(n) => n,
+            None => return None
+        };
+        let mut seed_def_numbers: Vec<u64> = vec![];
+        for num in number_line.trim().split_whitespace().into_iter() {
+            if num.chars().any(|x|x.is_digit(10)) {
+                seed_def_numbers.push(num.parse::<u64>().unwrap_or(0u64));
+            }
+        }
+        // if there is not an even amount of numbers, we just exit.
+        // seed definition is a pair of numbers pairs per challenge problem part 2
+        if seed_def_numbers.len() % 2 != 0 {
+            panic!("ERROR: Seed line is not an even number of items!\n\tMust be: <entry1> <entry2> ... <entryN>.\n\tWhere: <entry> = <seed start> <range>")
+        }
+        loop {
+            let buffer_chunk = match seed_def_numbers.first_chunk::<2>() {
+                Some(s) => *s,
+                None => break
+            };
+            //dbg!(buffer_chunk);
+            seed_def_numbers.drain(0..2);
+            let seed_start = *buffer_chunk.get(0).unwrap_or(&0u64);
+            let seed_range = *buffer_chunk.get(1).unwrap_or(&0u64);
+            //dbg!(seed_start);
+            //dbg!(seed_range);
+            let mut counter = seed_start;
+            while counter <= seed_start + seed_range {
+                //println!("s: {:?}", counter);
+                let mut source_value = counter;
+                for map_id in self.route.iter() {
+                    let mi = match self.lookup_mapid(*map_id) {
+                        Some(m) => m,
+                        None => continue
+                    };
+                    let (category, val) = mi.convert_value(source_value);
+                    if category == "location".to_string() && val < lowest {
+                         lowest = val;
+                    }
+                    source_value = val;
+                }
+                counter += 1;
+            }
+            if seed_def_numbers.is_empty() {
+                break;
+            }
+        }
+        Some(lowest)
+    }
+
 }
 
 /* *************************************************************************
@@ -417,9 +484,14 @@ fn main() {
     let lowest = locations.first().unwrap_or(&0u64);
     println!("Lowest location: {:?}", lowest);
 
+     ------------- REMOVED ABOVE:  Only used for part 1 ------------------
     */
 
-    // For part 2
-    let lowest = almanac.lowest_location();
+    // For part 2, seed entry line in input is a pair of numbers: <start> <range>
+    //let lowest = almanac.lowest_location();
+    let lowest = match almanac.lowest_location() {
+        Some(l) => l,
+        None => panic!("ERROR: Cannot identify seed numbers, and category ranges from input document!")
+    };
     println!("Lowest location: {:?}", lowest);
 }
