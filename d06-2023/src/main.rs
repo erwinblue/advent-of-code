@@ -63,18 +63,16 @@ fn solve_part2(file_input: &String, lines: &Vec<String>) {
  * Solve the number of ways to win per race
  */
 fn get_waystowin(race: &Race) -> u64 {
-    let distance_to_beat = race.distance;
-    let race_duration = race.duration;
-    let mut ways = 0u64;
-    if race_duration > 0 {
-        for button_press in 1..race_duration {
-            let press_travel = (race_duration - button_press) * button_press;
-            if press_travel > distance_to_beat {
-                ways += 1;
+    let mut count= 0u64;
+    if race.duration > 0 {
+        for button_press in 1..race.duration {
+            let press_travel = (race.duration - button_press) * button_press;
+            if press_travel > race.distance {
+                count += 1;
             }
         }
     }
-    ways
+    count
 }
 
 /*
