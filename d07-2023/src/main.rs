@@ -41,58 +41,20 @@ struct Hand {
 
 impl Hand {
     fn new(id: usize, line: &str) -> Option<Hand> {
-        /*
-            Break line into hand and bid, assume each line is
-                yyyyy zzzzz
-              Where:
-                yyyyy = Hand comprised of 5 cards
-                zzzzz = bid i.e. integer
-        */
+        // Break line into hand and bid/wager
         let parts: Vec<&str> = line.split_whitespace().into_iter().collect();
-
-        // For debugging only, remove
-        //println!("Parts: {:?}", &parts);
-
         // Parse the Hand of 5 cards
-        /*let hand = match parts.get(0) {
-            Some(h) => {
-                let x = match parse_hand_entry(*h) {
-                    Some(x) => x,
-                    None => return None
-                };
-                x
-            },
-            None => return None
-        };*/
         let hand = parse_hand_entry(parts.get(0)?)?;
-
-        // For debugging only, remove
-        //println!("Hand: {:?}", &hand);
-
         // Parse the bid i.e. wager of the hand
-        /*let wager= match parts.get(1) {
-            Some(b) => {
-                let x = match b.to_string().parse::<u32>() {
-                    Ok(y) => y,
-                    Err(_) => return None
-                };
-                x
-            },
-            None => return None
-        };*/
         let wager = match parts.get(1)?.to_string().parse::<u32>() {
             Ok(w) => w,
             Err(_) => return None
         };
-
         // Figure out the hand type of the card
         let hand_type = parse_hand_type(&hand);
-        
         // Return our value
-        Some(Hand {
-            id: (id + 1) as u32,
-            entry: line.to_owned(),
-            cards: hand.to_vec(),
+        Some(Hand { id: (id + 1) as u32,
+            entry: line.to_owned(), cards: hand.to_vec(),
             bid: wager,
             hand_type: hand_type
         })
@@ -102,51 +64,34 @@ impl Hand {
 /* *************************************************************************
                            HELPER FUNCTIONS
    ************************************************************************* */
+
+// A set of (5) cards i.e. Hand, to HandType enum
 fn parse_hand_type(hand: &Vec<Card>) -> HandType {
     // Get the counts of same cards
     let mut card_counts: HashMap<Card, u8> = HashMap::new();
     for card in hand.iter() {
-        let c = card_counts.entry(*card).or_insert(0u8);
-        *c += 1;
+        *card_counts.entry(*card).or_insert(0u8) += 1;
     }
-
-    // For debugging only, remove
-    //println!("card counts: {:?}", &card_counts);
-
-    // Figure out the types we have
-    let mut has_five = false;
-    let mut has_four = false;
-    let mut has_three = false;
-    let mut has_pair = 0u8;
-    for count in card_counts.values() {
-        if *count == 5 {
-            has_five = true;
-        } else if *count == 4 {
-            has_four = true;
-        } else if *count == 3 {
-            has_three = true;
-        } else if *count == 2 {
-            has_pair += 1;
-        }
-    }
-    // Return the type we have
-    if has_five {
-        return HandType::FiveOfAKind;
-    } else if has_four {
-        return HandType::FourOfAKind;
-    } else if has_three && has_pair == 1 {
-        return HandType::FullHouse;
-    } else if has_three && has_pair == 0 {
-        return HandType::ThreeOfAKind;
-    } else if has_pair == 2 {
-        return HandType::TwoPair;
-    } else if has_pair == 1 {
-        return HandType::OnePair;
+    let mut counts: Vec<u8> = card_counts.values().into_iter().map(|x|*x).collect();
+    counts.sort();
+    if counts == vec![5] {
+        HandType::FiveOfAKind
+    } else if counts == vec![1, 4] {
+        HandType::FourOfAKind
+    } else if counts == vec![2, 3] {
+        HandType::FullHouse
+    } else if counts == vec![1, 1, 3] {
+        HandType::ThreeOfAKind
+    } else if counts == vec![1, 2, 2] {
+        HandType::TwoPair
+    } else if counts == vec![1, 1, 1, 2] {
+        HandType::OnePair
     } else {
-        return HandType::HighCard;
+        HandType::HighCard
     }
 }
 
+// From character primitive to a vector of Card enum
 fn parse_hand_entry(entry: &str) -> Option<Vec<Card>> {
     let mut cards: Vec<Card> = vec![];
     for c in entry.chars().into_iter() {
@@ -176,51 +121,34 @@ fn parse_hand_entry(entry: &str) -> Option<Vec<Card>> {
     }
 }
 
+/* *************************************************************************
+                               SOLVE FOR PART 1
+   ************************************************************************* */
 fn solve_part1(lines: &Vec<String>) {
-    // For debugging only, remove
-    //println!("-------------------------------");
-    //println!("Read Hands from puzzle input:");
-    //println!("-------------------------------");
-
     let mut hands: Vec<Hand> = vec![];
     for (i, line) in lines.iter().enumerate() {
         let hand = match Hand::new(i, line) {
             Some(h) => h,
             None => continue
         };
-
-        // For debugging only, remove
-        //println!("Line# {:?}: {:?} -> hand: {:?} bid: {:?} type: {:?}", (i + 1), &line, &hand.cards, &hand.bid, &hand.hand_type);
-
         hands.push(hand);
     }
 
     // Sort our hands by hand_type then, for similar hand_type, sort by individual card value
-    hands.sort_by(|a, b| a.hand_type.cmp(&b.hand_type)
-        .then(a.cards.cmp(&b.cards))
-    );
+    hands.sort_by(|a, b| a.hand_type.cmp(&b.hand_type).then(a.cards.cmp(&b.cards)));
 
-    // For debugging only, remove
-    //println!("-------------------------------");
-    //println!("Hands Sorted by HandType then by Card values:");
-    //println!("-------------------------------");
-
+    // Get the winnings per hand, where: (winnings per hand) = (hand rank) * bid
     let mut winnings: BTreeMap<u32, &Hand> = BTreeMap::new();
     for (rank, h) in hands.iter().enumerate() {
         let _ = winnings.entry(rank as u32 + 1).or_insert(h);
-
-        // For debugging only, remove
-        //println!("{:?} -> hand: {:?} bid: {:?} type: {:?}", &h.entry, &h.cards, &h.bid, &h.hand_type);
     }
 
-    let mut total_winnings = 0u32;
-    for (i, h) in winnings.iter() {
-        total_winnings += i * h.bid;
-    }
+    // Get the total winnings and print the result 
+    let total_winnings = winnings.iter().map(|(x, y)| *x * y.bid)
+        .fold(0, |acc, a| acc + a);
     println!("-------------------------------");
     println!("Total winnings: {:?}", total_winnings);
     println!("-------------------------------\n");
-
 }
 
 
@@ -251,5 +179,4 @@ fn main() {
 
     // Puzzle solution starts here
     solve_part1(&lines);
-
 }
