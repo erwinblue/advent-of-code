@@ -182,7 +182,7 @@ fn solve_part1(lines: &Vec<String>) {
     //println!("Read Hands from puzzle input:");
     //println!("-------------------------------");
 
-    let mut hands: Vec<Hand> = vec!{};
+    let mut hands: Vec<Hand> = vec![];
     for (i, line) in lines.iter().enumerate() {
         let hand = match Hand::new(i, line) {
             Some(h) => h,
