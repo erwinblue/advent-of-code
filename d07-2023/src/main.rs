@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 /* *************************************************************************
                         LIBRARIES AND DECLARATIONS
    ************************************************************************* */
+use std::collections::{BTreeMap, HashMap};
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -54,7 +54,7 @@ impl Hand {
         //println!("Parts: {:?}", &parts);
 
         // Parse the Hand of 5 cards
-        let hand = match parts.get(0) {
+        /*let hand = match parts.get(0) {
             Some(h) => {
                 let x = match parse_hand_entry(*h) {
                     Some(x) => x,
@@ -63,13 +63,14 @@ impl Hand {
                 x
             },
             None => return None
-        };
+        };*/
+        let hand = parse_hand_entry(parts.get(0)?)?;
 
         // For debugging only, remove
         //println!("Hand: {:?}", &hand);
 
         // Parse the bid i.e. wager of the hand
-        let wager= match parts.get(1) {
+        /*let wager= match parts.get(1) {
             Some(b) => {
                 let x = match b.to_string().parse::<u32>() {
                     Ok(y) => y,
@@ -78,6 +79,10 @@ impl Hand {
                 x
             },
             None => return None
+        };*/
+        let wager = match parts.get(1)?.to_string().parse::<u32>() {
+            Ok(w) => w,
+            Err(_) => return None
         };
 
         // Figure out the hand type of the card
@@ -162,6 +167,8 @@ fn parse_hand_entry(entry: &str) -> Option<Vec<Card>> {
         };
         cards.push(card);
     }
+
+    // Minor sanity check if we have hand that has correct number of cards
     if cards.len() == 5 {
         Some(cards)
     } else {
@@ -169,11 +176,12 @@ fn parse_hand_entry(entry: &str) -> Option<Vec<Card>> {
     }
 }
 
-fn compute_winnings(hands: &Vec<Hand>) -> HashMap<u32, u32> {
-    todo!();
-}
-
 fn solve_part1(lines: &Vec<String>) {
+    // For debugging only, remove
+    //println!("-------------------------------");
+    //println!("Read Hands from puzzle input:");
+    //println!("-------------------------------");
+
     let mut hands: Vec<Hand> = vec!{};
     for (i, line) in lines.iter().enumerate() {
         let hand = match Hand::new(i, line) {
@@ -187,7 +195,32 @@ fn solve_part1(lines: &Vec<String>) {
         hands.push(hand);
     }
 
-    let winnings = compute_winnings(&hands);
+    // Sort our hands by hand_type then, for similar hand_type, sort by individual card value
+    hands.sort_by(|a, b| a.hand_type.cmp(&b.hand_type)
+        .then(a.cards.cmp(&b.cards))
+    );
+
+    // For debugging only, remove
+    //println!("-------------------------------");
+    //println!("Hands Sorted by HandType then by Card values:");
+    //println!("-------------------------------");
+
+    let mut winnings: BTreeMap<u32, &Hand> = BTreeMap::new();
+    for (rank, h) in hands.iter().enumerate() {
+        let _ = winnings.entry(rank as u32 + 1).or_insert(h);
+
+        // For debugging only, remove
+        //println!("{:?} -> hand: {:?} bid: {:?} type: {:?}", &h.entry, &h.cards, &h.bid, &h.hand_type);
+    }
+
+    let mut total_winnings = 0u32;
+    for (i, h) in winnings.iter() {
+        total_winnings += i * h.bid;
+    }
+    println!("-------------------------------");
+    println!("Total winnings: {:?}", total_winnings);
+    println!("-------------------------------\n");
+
 }
 
 
