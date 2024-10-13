@@ -12,8 +12,10 @@ use std::io::{BufRead, BufReader};
    ************************************************************************* */
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 enum Card {
+    // Part 2:  Move Jack to the lowest valued card per challenge
+    J,
     Some(u8),
-    T, J, Q, K, A
+    T, Q, K, A
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -64,30 +66,45 @@ impl Hand {
 /* *************************************************************************
                            HELPER FUNCTIONS
    ************************************************************************* */
-
-// A set of (5) cards i.e. Hand, to HandType enum
-fn parse_hand_type(hand: &Vec<Card>) -> HandType {
-    // Get the counts of same cards
-    let mut card_counts: HashMap<Card, u8> = HashMap::new();
-    for card in hand.iter() {
-        *card_counts.entry(*card).or_insert(0u8) += 1;
-    }
-    let mut counts: Vec<u8> = card_counts.values().into_iter().map(|x|*x).collect();
-    counts.sort();
-    if counts == vec![5] {
+// Card counts to HandType
+fn card_counts_to_handtype(counts: &Vec<u8>) -> HandType {
+    if *counts == vec![5] {
         HandType::FiveOfAKind
-    } else if counts == vec![1, 4] {
+    } else if *counts == vec![1, 4] {
         HandType::FourOfAKind
-    } else if counts == vec![2, 3] {
+    } else if *counts == vec![2, 3] {
         HandType::FullHouse
-    } else if counts == vec![1, 1, 3] {
+    } else if *counts == vec![1, 1, 3] {
         HandType::ThreeOfAKind
-    } else if counts == vec![1, 2, 2] {
+    } else if *counts == vec![1, 2, 2] {
         HandType::TwoPair
-    } else if counts == vec![1, 1, 1, 2] {
+    } else if *counts == vec![1, 1, 1, 2] {
         HandType::OnePair
     } else {
         HandType::HighCard
+    }
+}
+
+// A set of (5) cards i.e. Hand, to HandType enum
+// Part 2: Jack can pretend to be whatever card is best to make hand the best HandType
+fn parse_hand_type(hand: &Vec<Card>) -> HandType {
+    // Get the counts of same cards
+    let mut card_counts: HashMap<Card, u8> = HashMap::new();
+    let mut jacks = 0u8;
+    for card in hand.iter() {
+        if *card == Card::J {
+            jacks += 1;
+        } else {
+            *card_counts.entry(*card).or_insert(0u8) += 1;
+        }
+    }
+    let mut counts: Vec<u8> = card_counts.values().into_iter().map(|x|*x).collect();
+    counts.sort();
+    if jacks == 5 {
+        HandType::FiveOfAKind
+    } else {
+        counts[card_counts.len() - 1] = counts[card_counts.len()- 1] + jacks;
+        card_counts_to_handtype(&counts)
     }
 }
 
